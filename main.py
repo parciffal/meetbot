@@ -26,18 +26,26 @@ logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(
                     )
 
 
-@dp.callback_query_handler(lambda call: call.data in ['accept'])
+@dp.callback_query_handler(lambda call: call.data in ['accept', 'addnew'])
 async def call_accept(call: types.CallbackQuery):
     try:
         if call.data == 'accept':
-            print(call.message)
-            await bot.send_message(int(user_info['user_id']), ACCEPTION_MESSAGE_FROM_GROUP)
+            markup = types.InlineKeyboardMarkup()
+            b1 = types.InlineKeyboardButton('Add new order', callback_data='addnew')
+            markup.add(b1)
+            await bot.send_message(int(user_info['user_id']), ACCEPTION_MESSAGE_FROM_GROUP, reply_markup=markup)
             await bot.send_message(call.message.chat.id, user_info['username']+' order Accepted')
+        elif call.data == 'addnew':
+            markup = welcome_murkup
+            await call.message.answer(REPIT_MESSAGE, reply_markup=markup)
+            user_info['username'] = user_info['username']
+            user_info['user_id'] = user_info['user_id']
+            await User.S1.set()
     except Exception as e:
         print(repr(e))
 
 
-@dp.callback_query_handler(lambda call: call.data in ['confirm'],state=User.S5)
+@dp.callback_query_handler(lambda call: call.data in ['confirm', 'repit'],state=User.S5)
 async def call_confirm(call: types.CallbackQuery):
     try:
         if call.data == 'confirm':
@@ -47,15 +55,20 @@ async def call_confirm(call: types.CallbackQuery):
             b = types.InlineKeyboardButton(ACCEPTBUTTONTEXT, callback_data='accept')
             markup.add(b)
             await bot.send_message(GROUP_ID, GROUP_SEND_MESSAGE.format(username=user_info['username'],
-                                                                                       quantity=user_info['quantity'],
-                                                                                       price=user_info['price'],
-                                                                                       date=user_info['date'],
-                                                                                       todey=d2,
-                                                                                       latitude=user_info['latitude'],
-                                                                                       longitude=user_info['longitude']),
-                                   reply_markup=markup)
+                                                                       quantity=user_info['quantity'],
+                                                                       price=user_info['price'],
+                                                                       date=user_info['date'],
+                                                                       todey=d2,
+                                                                       latitude=user_info['latitude'],
+                                                                       longitude=user_info['longitude']),
+                                                                       reply_markup=markup)
             await dp.storage.close()
-
+        elif call.data == 'repit':
+            markup = welcome_murkup
+            await call.message.answer(REPIT_MESSAGE, reply_markup=markup)
+            user_info['username'] = user_info['username']
+            user_info['user_id'] = user_info['user_id']
+            await User.S1.set()
     except Exception as e:
         print(repr(e))
 
@@ -125,7 +138,9 @@ async def date_step(message: types.Message):
                 user_info['date'] = message.text
                 markup = types.InlineKeyboardMarkup()
                 b1 = types.InlineKeyboardButton(CONFIRMBUTT, callback_data='confirm')
+                b2 = types.InlineKeyboardButton(REPITBUTT, callback_data='repit')
                 markup.add(b1)
+                markup.add(b2)
                 d2 = today.strftime("%B, %Y")
                 await bot.send_message(message.chat.id, CONFIRMMESSAGE_TEXT.format(quantity=user_info['quantity'],
                                                                                    price=user_info['price'],
